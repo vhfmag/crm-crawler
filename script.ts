@@ -2,7 +2,7 @@ import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import RecaptchaPlugin from "puppeteer-extra-plugin-recaptcha";
 import fs from "node:fs/promises";
-import { Page, Frame } from "puppeteer";
+import { Page } from "puppeteer-core";
 import Papa from "papaparse";
 import ms, { StringValue as MsString } from "ms";
 

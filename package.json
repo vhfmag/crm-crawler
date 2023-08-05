@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "bin": "build/js/script.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc && pkg ."
   },
   "author": "",
   "license": "ISC",
@@ -14,11 +15,20 @@
     "@types/papaparse": "^5.3.7",
     "ms": "^3.0.0-canary.1",
     "papaparse": "^5.4.1",
+    "patch-package": "^8.0.0",
     "puppeteer-core": "^20.8.2",
     "puppeteer-extra": "^3.3.6",
-    "puppeteer-extra-plugin-adblocker": "^2.13.6",
     "puppeteer-extra-plugin-recaptcha": "^3.6.8",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
     "typescript": "^5.1.6"
+  },
+  "devDependencies": {
+    "pkg": "^5.8.1"
+  },
+  "pkg": {
+    "assets": [
+      "node_modules/puppeteer-extra-plugin-stealth/**/*.*"
+    ],
+    "outputPath": "build/bin"
   }
 }

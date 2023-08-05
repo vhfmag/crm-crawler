@@ -1,0 +1,11 @@
+diff --git a/node_modules/puppeteer-extra/dist/index.d.ts b/node_modules/puppeteer-extra/dist/index.d.ts
+index 19c667e..a731446 100644
+--- a/node_modules/puppeteer-extra/dist/index.d.ts
++++ b/node_modules/puppeteer-extra/dist/index.d.ts
+@@ -1,5 +1,5 @@
+ /// <reference path="../dist/puppeteer-legacy.d.ts" />
+-import { PuppeteerNode } from 'puppeteer';
++import { PuppeteerNode } from 'puppeteer-core';
+ /**
+  * Original Puppeteer API
+  * @private
