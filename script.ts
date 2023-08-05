@@ -157,8 +157,17 @@ const takeScreenshot = (page: Page) =>
 
 const DEFAULT_TIMEOUT: MsString = "2 min";
 const PPTR_BROWSERS_CACHE_DIR = path.join(os.tmpdir(), "pptr_browsers_cache");
+const BROWSER_TO_INSTALL = pptrBrowsers.Browser.CHROMIUM;
 
-async function main() {
+async function getBrowserExecutable() {
+  try {
+    return await pptrBrowsers.computeSystemExecutablePath({
+      browser: pptrBrowsers.Browser.CHROME,
+      channel: pptrBrowsers.ChromeReleaseChannel.STABLE,
+    });
+  } catch {}
+
+  console.log("Didn't find Chrome in the system. Using a bundled version.");
   const browsers = await pptrBrowsers.getInstalledBrowsers({
     cacheDir: PPTR_BROWSERS_CACHE_DIR,
   });
@@ -166,9 +175,9 @@ async function main() {
     console.log("No browsers found in cacheDir. Downloading a new one...");
     browsers.push(
       await pptrBrowsers.install({
-        browser: pptrBrowsers.Browser.CHROMIUM,
+        browser: BROWSER_TO_INSTALL,
         buildId: await pptrBrowsers.resolveBuildId(
-          pptrBrowsers.Browser.CHROMIUM,
+          BROWSER_TO_INSTALL,
           pptrBrowsers.detectBrowserPlatform()!,
           "latest"
         ),
@@ -176,9 +185,12 @@ async function main() {
       })
     );
   }
+  return browsers[0].executablePath;
+}
 
+async function main() {
   const browser = await puppeteer.launch({
-    executablePath: browsers[0].executablePath,
+    executablePath: await getBrowserExecutable(),
     headless: false,
     devtools: true,
     args: ["--start-maximized"],
