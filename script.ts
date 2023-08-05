@@ -2,7 +2,10 @@ import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import RecaptchaPlugin from "puppeteer-extra-plugin-recaptcha";
 import fs from "node:fs/promises";
+import path from "node:path";
+import os from "node:os";
 import { Page } from "puppeteer-core";
+import * as pptrBrowsers from "@puppeteer/browsers";
 import Papa from "papaparse";
 import ms, { StringValue as MsString } from "ms";
 
@@ -153,9 +156,29 @@ const takeScreenshot = (page: Page) =>
   page.screenshot({ path: "output/screenshot.png" });
 
 const DEFAULT_TIMEOUT: MsString = "2 min";
+const PPTR_BROWSERS_CACHE_DIR = path.join(os.tmpdir(), "pptr_browsers_cache");
 
 async function main() {
+  const browsers = await pptrBrowsers.getInstalledBrowsers({
+    cacheDir: PPTR_BROWSERS_CACHE_DIR,
+  });
+  if (browsers.length === 0) {
+    console.log("No browsers found in cacheDir. Downloading a new one...");
+    browsers.push(
+      await pptrBrowsers.install({
+        browser: pptrBrowsers.Browser.CHROMIUM,
+        buildId: await pptrBrowsers.resolveBuildId(
+          pptrBrowsers.Browser.CHROMIUM,
+          pptrBrowsers.detectBrowserPlatform()!,
+          "latest"
+        ),
+        cacheDir: PPTR_BROWSERS_CACHE_DIR,
+      })
+    );
+  }
+
   const browser = await puppeteer.launch({
+    executablePath: browsers[0].executablePath,
     headless: false,
     devtools: true,
     args: ["--start-maximized"],
