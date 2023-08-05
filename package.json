@@ -5,7 +5,7 @@
   "main": "index.js",
   "bin": "build/js/script.js",
   "scripts": {
-    "build": "tsc && pkg ."
+    "build": "tsc && pkg . --compress GZip"
   },
   "author": "",
   "license": "ISC",
