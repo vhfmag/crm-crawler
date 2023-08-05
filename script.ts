@@ -1,11 +1,13 @@
 import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
+import RecaptchaPlugin from "puppeteer-extra-plugin-recaptcha";
 import fs from "node:fs/promises";
 import { Page, Frame } from "puppeteer";
 import Papa from "papaparse";
 import ms, { StringValue as MsString } from "ms";
 
 puppeteer.use(StealthPlugin());
+puppeteer.use(RecaptchaPlugin({ visualFeedback: true }));
 
 const idList = new Set<string>();
 const idMap = new Map<string, Record<string, string>>();
@@ -117,18 +119,29 @@ const goToNextPage = async (
   return hasNextPage;
 };
 
-async function detectAndHandleRecaptcha(frame: Frame) {
-  const page = frame.page();
-  if (frame.url().includes("recaptcha/")) {
-    console.log("Recaptcha detectado", frame.url());
-    await Promise.all([
-      page.bringToFront(),
-      page.evaluate(() =>
-        document.querySelector(`iframe[src*="recaptcha/"]`)?.scrollIntoView()
-      ),
-      page.evaluate(() => alert("Resolva o recaptcha")),
-    ]);
-  }
+const detectedRecaptchaIds = new Set<string>();
+
+async function detectAndHandleRecaptchas(page: Page) {
+  const timeoutInterval = ms("1s");
+  setTimeout(async function timeoutCallback() {
+    try {
+      const { captchas } = await page.findRecaptchas();
+      const hasNewCaptcha = captchas.some(({ id }) =>
+        id ? !detectedRecaptchaIds.has(id) : false
+      );
+      captchas.forEach(({ id }) => id && detectedRecaptchaIds.add(id));
+
+      if (hasNewCaptcha) {
+        console.log("Recaptcha detectado", captchas);
+        await Promise.all([
+          page.bringToFront(),
+          page.evaluate(() => alert("Resolva o recaptcha")),
+        ]);
+      }
+    } finally {
+      if (!page.isClosed()) setTimeout(timeoutCallback, timeoutInterval);
+    }
+  }, timeoutInterval);
 }
 
 const pauseBrowser = (page: Page) =>
@@ -154,7 +167,7 @@ async function main() {
   page.on("close", () => browser.close());
 
   patchConsole(new WeakRef(page));
-  page.on("framenavigated", detectAndHandleRecaptcha);
+  detectAndHandleRecaptchas(page);
 
   page.setDefaultTimeout(ms(DEFAULT_TIMEOUT));
 
@@ -174,6 +187,8 @@ async function main() {
           searchButton.addEventListener("click", () => resolve(), {
             once: true,
           });
+          const form = document.querySelector("form#buscaForm");
+          (form?.closest("article") ?? form)?.scrollIntoView();
           alert("Escolha seus filtros e clique em buscar");
         }),
       searchButtonSelector
@@ -190,8 +205,8 @@ async function main() {
   console.log(`Initiating extraction script. Total pages: ${totalPages}`);
 
   let pageNumber: string | undefined = "1";
+  console.group(`Page ${pageNumber}/${totalPages}`);
   do {
-    console.group(`Page ${pageNumber}/${totalPages}`);
     const dedupedItemCountBefore = idList.size;
     try {
       const itemSelector = ".resultado-item";
@@ -250,11 +265,12 @@ async function main() {
       ]);
       console.timeEnd(timerLabel);
     } finally {
-      console.groupEnd();
     }
   } while (
     await goToNextPage(page, (n) => {
       pageNumber = n;
+      console.groupEnd();
+      console.group(`Page ${pageNumber}/${totalPages}`);
     })
   );
 
