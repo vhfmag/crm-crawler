@@ -11,6 +11,9 @@
   "dependencies": {
     "@swc-node/register": "^1.6.6",
     "@swc/core": "^1.3.69",
+    "@types/papaparse": "^5.3.7",
+    "ms": "^3.0.0-canary.1",
+    "papaparse": "^5.4.1",
     "puppeteer-core": "^20.8.2",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-adblocker": "^2.13.6",
