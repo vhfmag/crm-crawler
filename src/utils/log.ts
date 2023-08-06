@@ -1,22 +1,41 @@
 import { Page } from "puppeteer-core";
+import fs from "node:fs";
 
 const originalConsole = console;
 Object.assign(globalThis, { originalConsole });
+
+type WriteStreamName = NonNullable<
+  {
+    [K in keyof typeof process]: (typeof process)[K] extends NodeJS.WriteStream
+      ? K
+      : never;
+  }[keyof typeof process]
+>;
+
+export const persistLogs = (streamName: WriteStreamName) => {
+  const fileStream = fs.createWriteStream(`output/${streamName}.log`);
+  const originalStreamWrite = process[streamName].write.bind(
+    process[streamName]
+  );
+  process[streamName].write = (...args) => {
+    (fileStream.write as any)(...args);
+    return (originalStreamWrite as any)(...args);
+  };
+};
 
 export const patchConsole = async (pageRef: WeakRef<Page>) => {
   {
     const page = pageRef.deref();
     if (!page) return;
 
-    page.exposeFunction(
+    await page.exposeFunction(
       "callNodeConsole",
       (methodName: keyof Console, ...args: any[]) => {
-        originalConsole.log("callNodeConsole", { methodName, args });
         (originalConsole[methodName] as any)(...args);
       }
     );
 
-    page.evaluate(() => {
+    await page.evaluate(() => {
       const originalConsole = globalThis.console;
       Object.assign(globalThis, {
         originalConsole,

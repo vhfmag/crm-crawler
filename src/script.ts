@@ -1,11 +1,10 @@
 import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import RecaptchaPlugin from "puppeteer-extra-plugin-recaptcha";
-import fs from "node:fs/promises";
 import Papa from "papaparse";
 import ms, { StringValue as MsString } from "ms";
 import { detectAndHandleRecaptchas } from "./utils/recaptcha";
-import { patchConsole } from "./utils/log";
+import { patchConsole, persistLogs } from "./utils/log";
 import { getBrowserExecutable } from "./utils/browser";
 import { goToNextPage, goToPage } from "./utils/navigation";
 import { extractPageData, waitDataLoad } from "./utils/extraction";
@@ -31,6 +30,11 @@ const getPageLabel = (pageNumber: unknown, totalPages: unknown) =>
   `Page ${pageNumber}/${Number(pageNumber) !== 1 ? totalPages : "?"}`;
 
 async function main() {
+  await createDirIfMissing("output");
+
+  persistLogs("stdout");
+  persistLogs("stderr");
+
   const browser = await puppeteer.launch({
     executablePath: await getBrowserExecutable(),
     headless: false,
@@ -130,7 +134,6 @@ async function main() {
       });
 
       const data = [...idMap.values()];
-      await createDirIfMissing("output");
       await Promise.all([
         writeOutput("output/data.json", JSON.stringify({ data, skippedPages })),
         writeOutput("output/data.csv", Papa.unparse(data)),
