@@ -8,14 +8,11 @@ jobs:
     strategy:
       matrix:
         platform:
-          - pkg-target: linux
-            runs-on: ubuntu-latest
+          - runs-on: ubuntu-latest
             name: Linux
-          - pkg-target: macos
-            runs-on: macos-latest
+          - runs-on: macos-latest
             name: macOS
-          - pkg-target: win
-            runs-on: windows-latest
+          - runs-on: windows-latest
             name: Windows
     runs-on: ${{ matrix.platform.runs-on }}
     steps:
@@ -24,7 +21,7 @@ jobs:
         with:
           node-version: "18"
       - run: npm ci
-      - run: npm run build -- --target ${{ matrix.platform.pkg-target }}
+      - run: npm run build -- --target host
       - name: Archive production artifacts
         uses: actions/upload-artifact@v3
         with:
