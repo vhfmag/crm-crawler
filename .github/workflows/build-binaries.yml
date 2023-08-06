@@ -8,13 +8,13 @@ jobs:
     strategy:
       matrix:
         platform:
-          - pkg-target: node18-linux-arm64
+          - pkg-target: node18-linux-amd64
             runs-on: ubuntu-latest
             name: Linux
-          - pkg-target: node18-macos-arm64
+          - pkg-target: node18-macos-amd64
             runs-on: macos-latest
             name: macOS
-          - pkg-target: node18-win-arm64
+          - pkg-target: node18-win-amd64
             runs-on: windows-latest
             name: Windows
     runs-on: ${{ matrix.platform.runs-on }}
@@ -29,4 +29,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.platform.name }} binaries
-          path: build/bin/crm-cralwer
+          path: build/bin
