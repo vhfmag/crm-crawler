@@ -32,5 +32,8 @@
       "node_modules/puppeteer-extra-plugin-stealth/**/*.*"
     ],
     "outputPath": "build/bin"
+  },
+  "volta": {
+    "node": "18.17.0"
   }
 }
