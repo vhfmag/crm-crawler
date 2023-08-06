@@ -14,7 +14,7 @@ puppeteer.use(RecaptchaPlugin({ visualFeedback: true }));
 
 const idList = new Set<string>();
 const idMap = new Map<string, Record<string, string>>();
-const skippedPages: string[] = [];
+const skippedPages: number[] = [];
 
 process.on("unhandledRejection", (reason, promise) => {
   console.warn("Unhandled Rejection at:", promise, "reason:", reason);
@@ -86,40 +86,62 @@ const patchConsole = async (pageRef: WeakRef<Page>) => {
   });
 };
 
-const goToNextPage = async (
-  page: Page,
-  onNewPage?: (num: string | undefined) => void
-) => {
-  const [hasNextPage, pageNumber] = await page.evaluate(() => {
+const isNotNullish = <T>(value: T): value is NonNullable<T> =>
+  value !== null && value !== undefined;
+const parsePageNumber = (pageNumber: string | undefined) => {
+  if (!isNotNullish(pageNumber)) return undefined;
+  const parsed = parseInt(pageNumber, 10);
+  return isNaN(parsed) ? undefined : parsed;
+};
+
+const goToPage = async (page: Page, pageNumber: number) => {
+  const succeeded = await page.evaluate((pageNumber) => {
     for (const currentResult of document.querySelectorAll(".resultado-item")) {
       currentResult.classList.add("stale");
     }
 
     const nextPageTrigger = document.querySelector(
-      ".paginationjs-page.active + .paginationjs-page a"
+      `.paginationjs-page[data-num=${pageNumber}] a[href]`
     );
-    const hasNextPage = nextPageTrigger instanceof HTMLElement;
-    const pageNumber = hasNextPage
-      ? nextPageTrigger.parentElement!.dataset.num
-      : undefined;
-    console.log(`Is there a next page? ${hasNextPage}`);
-    if (hasNextPage) {
-      console.log("Next page load: triggering", {
-        num: nextPageTrigger.parentElement!.dataset.num,
-      });
-      nextPageTrigger.click();
-      console.log("Next page load: triggered", {
-        num: nextPageTrigger.parentElement!.dataset.num,
-      });
-    }
-    return [hasNextPage, pageNumber] as const;
-  });
-  if (hasNextPage) {
+
+    if (!(nextPageTrigger instanceof HTMLElement)) return false;
+
+    console.log("Page load: triggering", { pageNumber });
+    nextPageTrigger.click();
+    console.log("Page load: triggered", { pageNumber });
+    return true;
+  }, pageNumber);
+
+  if (succeeded) {
     await page.waitForSelector(".resultado-item:not(.stale)");
-    console.log("Next page load: done");
+    console.log("Page load: done", { pageNumber });
   }
-  onNewPage?.(pageNumber);
-  return hasNextPage;
+
+  return succeeded;
+};
+
+const goToNextPage = async (
+  page: Page,
+  onNewPage?: (pageNumber: number | undefined) => void
+) => {
+  const pageNumber = await page.evaluate(() => {
+    const nextPageTrigger = document.querySelector(
+      ".paginationjs-page.active + .paginationjs-page[data-num] a[href]"
+    );
+    const pageNumberStr =
+      nextPageTrigger instanceof HTMLElement
+        ? nextPageTrigger.parentElement!.dataset.num
+        : undefined;
+    return parsePageNumber(pageNumberStr);
+  });
+
+  if (isNotNullish(pageNumber)) {
+    const succeeded = await goToPage(page, pageNumber);
+    if (succeeded) onNewPage?.(pageNumber);
+    return succeeded;
+  }
+
+  return false;
 };
 
 const detectedRecaptchaIds = new Set<string>();
@@ -239,7 +261,7 @@ async function main() {
   );
   console.log(`Initiating extraction script. Total pages: ${totalPages}`);
 
-  let pageNumber: string | undefined = "1";
+  let pageNumber: number | undefined = 1;
   console.group(`Page ${pageNumber}/${totalPages}`);
   do {
     const dedupedItemCountBefore = idList.size;
@@ -273,7 +295,7 @@ async function main() {
         const id = item["CRM"]!;
         if (!idList.has(id)) {
           idList.add(id);
-          idMap.set(id, { ...item, Página: pageNumber });
+          idMap.set(id, { ...item, Página: String(pageNumber) });
         }
       }
 
