@@ -6,7 +6,8 @@
   "bin": "build/js/script.js",
   "scripts": {
     "build": "tsc && pkg . --compress GZip",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "start": "node -r @swc-node/register src/script.ts"
   },
   "author": "",
   "license": "ISC",
