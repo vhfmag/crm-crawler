@@ -5,7 +5,8 @@
   "main": "index.js",
   "bin": "build/js/script.js",
   "scripts": {
-    "build": "tsc && pkg . --compress GZip"
+    "build": "tsc && pkg . --compress GZip",
+    "postinstall": "patch-package"
   },
   "author": "",
   "license": "ISC",
