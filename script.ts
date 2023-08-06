@@ -295,9 +295,12 @@ async function main() {
       await Promise.all([
         fs.writeFile(
           "output/data.json",
-          JSON.stringify({ data, skippedPages })
+          JSON.stringify({ data, skippedPages }),
+          { encoding: "utf-8" }
         ),
-        fs.writeFile("output/data.csv", Papa.unparse(data)),
+        fs.writeFile("output/data.csv", Papa.unparse(data), {
+          encoding: "utf-8",
+        }),
       ]);
       console.timeEnd(timerLabel);
     } finally {
