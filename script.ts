@@ -291,6 +291,7 @@ async function main() {
       });
 
       const data = [...idMap.values()];
+      await fs.stat("output").catch(() => fs.mkdir("output"));
       await Promise.all([
         fs.writeFile(
           "output/data.json",
