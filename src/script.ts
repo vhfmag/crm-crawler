@@ -7,8 +7,8 @@ import ms, { StringValue as MsString } from "ms";
 import { detectAndHandleRecaptchas } from "./utils/recaptcha";
 import { patchConsole } from "./utils/log";
 import { getBrowserExecutable } from "./utils/browser";
-import { goToNextPage } from "./utils/navigation";
-import { extractPageData } from "./utils/extraction";
+import { goToNextPage, goToPage } from "./utils/navigation";
+import { extractPageData, waitDataLoad } from "./utils/extraction";
 import { createDirIfMissing, writeOutput } from "./utils/output";
 
 puppeteer.use(StealthPlugin());
@@ -23,6 +23,9 @@ process.on("unhandledRejection", (reason, promise) => {
 });
 
 const DEFAULT_TIMEOUT: MsString = "2 min";
+
+const isPageSkipped = (data: Record<string, string>[]) =>
+  data.every(({ CRM }) => idList.has(CRM));
 
 async function main() {
   const browser = await puppeteer.launch({
@@ -80,18 +83,34 @@ async function main() {
   do {
     const dedupedItemCountBefore = idList.size;
     try {
-      const pageData = await extractPageData(page);
+      let pageData = await extractPageData(page);
 
-      for (const item of pageData) {
-        const id = item["CRM"]!;
-        if (!idList.has(id)) {
-          idList.add(id);
-          idMap.set(id, { ...item, Página: String(pageNumber) });
+      if (isPageSkipped(pageData)) {
+        try {
+          console.group(`Retrying page ${pageNumber}/${totalPages}`);
+          console.log(`Loading page ${pageNumber - 1} again`);
+          await goToPage(page, pageNumber - 1);
+          console.log(`Waiting for data to load`);
+          await waitDataLoad(page);
+          console.log(`Loading page ${pageNumber} again`);
+          await goToPage(page, pageNumber);
+          pageData = await extractPageData(page);
+        } finally {
+          console.groupEnd();
         }
       }
 
-      if (idList.size === dedupedItemCountBefore) {
+      if (isPageSkipped(pageData)) {
+        console.log(`Page ${pageNumber} is still skipped after retrying`);
         skippedPages.push(pageNumber);
+      } else {
+        for (const item of pageData) {
+          const id = item["CRM"]!;
+          if (!idList.has(id)) {
+            idList.add(id);
+            idMap.set(id, { ...item, Página: String(pageNumber) });
+          }
+        }
       }
 
       const timerLabel = "Report & write partial results";

@@ -1,7 +1,8 @@
 import { Page } from "puppeteer-core";
 
-export async function extractPageData(page: Page) {
-  const itemSelector = ".resultado-item";
+const itemSelector = ".resultado-item";
+
+export async function waitDataLoad(page: Page) {
   await page.waitForSelector(itemSelector);
   console.log("Items loaded, waiting for aditional info to load");
 
@@ -11,7 +12,10 @@ export async function extractPageData(page: Page) {
   ]);
   await page.waitForNetworkIdle();
   console.log("Additional info loaded, extracting data");
+}
 
+export async function extractPageData(page: Page) {
+  await waitDataLoad(page);
   return page.evaluate((selector) => {
     return [...document.querySelectorAll(selector)].map((item) => {
       const staticEntries = [
