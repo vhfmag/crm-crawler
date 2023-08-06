@@ -1,0 +1,32 @@
+name: build-binaries
+run-name: Build binaries
+on:
+  push:
+    branches: [main]
+jobs:
+  build-windows:
+    strategy:
+      matrix:
+        platform:
+          - pkg-target: node18-linux-arm64
+            runs-on: ubuntu-latest
+            name: Linux
+          - pkg-target: node18-macos-arm64
+            runs-on: macos-latest
+            name: macOS
+          - pkg-target: node18-win-arm64
+            runs-on: windows-latest
+            name: Windows
+    runs-on: ${{ matrix.platform.runs-on }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+      - run: npm ci
+      - run: npm run build -- --target ${{ matrix.platform.pkg-target }}
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.platform.name }} binaries
+          path: build/bin/crm-cralwer
