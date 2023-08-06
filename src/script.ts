@@ -27,6 +27,9 @@ const DEFAULT_TIMEOUT: MsString = "2 min";
 const isPageSkipped = (data: Record<string, string>[]) =>
   data.every(({ CRM }) => idList.has(CRM));
 
+const getPageLabel = (pageNumber: unknown, totalPages: unknown) =>
+  `Page ${pageNumber}/${Number(pageNumber) !== 1 ? totalPages : "?"}`;
+
 async function main() {
   const browser = await puppeteer.launch({
     executablePath: await getBrowserExecutable(),
@@ -70,6 +73,11 @@ async function main() {
     page.setDefaultTimeout(ms(DEFAULT_TIMEOUT));
   }
 
+  // we call performance.now() here because loading started as soon as the button was clicked
+  let lastStartTime = performance.now();
+  let pageNumber: number | undefined = 1;
+  console.time(getPageLabel(pageNumber, ""));
+
   const lastPageButtonSelector = ".paginationjs-page.paginationjs-last";
   await page.waitForSelector(lastPageButtonSelector);
   const totalPages = await page.evaluate(
@@ -78,10 +86,9 @@ async function main() {
   );
   console.log(`Initiating extraction script. Total pages: ${totalPages}`);
 
-  let pageNumber: number | undefined = 1;
-  console.group(`Page ${pageNumber}/${totalPages}`);
+  let totalTime = 0;
+  console.group(getPageLabel(pageNumber, totalPages));
   do {
-    const dedupedItemCountBefore = idList.size;
     try {
       let pageData = await extractPageData(page);
 
@@ -130,12 +137,17 @@ async function main() {
       ]);
       console.timeEnd(timerLabel);
     } finally {
+      console.timeEnd(getPageLabel(pageNumber, totalPages));
+      totalTime += performance.now() - lastStartTime;
+      console.log(`Average time per page: ${totalTime / pageNumber}ms`);
+      lastStartTime = performance.now();
+      console.time(getPageLabel(pageNumber + 1, totalPages));
     }
   } while (
     await goToNextPage(page, (n) => {
       pageNumber = n;
       console.groupEnd();
-      console.group(`Page ${pageNumber}/${totalPages}`);
+      console.group(getPageLabel(pageNumber, totalPages));
     })
   );
 
