@@ -224,7 +224,7 @@ async function main() {
           });
           const form = document.querySelector("form#buscaForm");
           (form?.closest("article") ?? form)?.scrollIntoView();
-          alert("Escolha seus filtros e clique em buscar");
+          setTimeout(() => alert("Escolha seus filtros e clique em buscar"), 0);
         }),
       searchButtonSelector
     );
