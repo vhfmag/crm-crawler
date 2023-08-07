@@ -28,7 +28,26 @@ export async function extractPageData(page: Page) {
               .map((node) => node.textContent?.trim())
               .filter(Boolean);
             return [key!.replace(/:$/, ""), value!];
-          })
+          }),
+          [
+            ...item.querySelectorAll(
+              ".row:has(div:only-child > b:only-child) + .row > div:only-child:not(:has(b))"
+            ),
+          ]
+            .map((el) => {
+              if (!(el instanceof HTMLElement)) return undefined;
+
+              const value = el.innerText.trim();
+
+              const keyEl = el.parentElement?.previousElementSibling;
+
+              if (!(keyEl instanceof HTMLElement)) return undefined;
+
+              return [keyEl.innerText.trim().replace(/:$/, ""), value];
+            })
+            .filter(
+              <T>(v: T): v is NonNullable<T> => v !== null && v !== undefined
+            )
         )
       );
     });
