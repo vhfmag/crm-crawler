@@ -90,6 +90,8 @@ async function main() {
   );
   console.log(`Initiating extraction script. Total pages: ${totalPages}`);
 
+  const headers = new Set<string>(["Nome", "CRM"]);
+
   let totalTime = 0;
   console.group(getPageLabel(pageNumber, totalPages));
   do {
@@ -120,6 +122,7 @@ async function main() {
           if (!idList.has(id)) {
             idList.add(id);
             idMap.set(id, { ...item, Página: String(pageNumber) });
+            Object.keys(item).forEach((key) => headers.add(key));
           }
         }
       }
@@ -136,7 +139,10 @@ async function main() {
       const data = [...idMap.values()];
       await Promise.all([
         writeOutput("output/data.json", JSON.stringify({ data, skippedPages })),
-        writeOutput("output/data.csv", Papa.unparse(data)),
+        writeOutput(
+          "output/data.csv",
+          Papa.unparse(data, { columns: [...headers] })
+        ),
       ]);
       console.timeEnd(timerLabel);
     } finally {
